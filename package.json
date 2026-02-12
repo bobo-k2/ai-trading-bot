@@ -1,0 +1,19 @@
+{
+  "name": "solana-momentum-bot",
+  "version": "1.0.0",
+  "description": "Momentum trading bot for Solana tokens using Jupiter DEX",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.95.0",
+    "bs58": "^5.0.0",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

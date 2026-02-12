@@ -1,0 +1,43 @@
+{
+  "mode": "live",
+  "wallet": "7CXjC77JNXEqiV9ek2b1rLbJc8eNa1ANMbTMUQ57RsBf",
+  "rpc": {
+    "helius": "",
+    "fallback": "https://api.mainnet-beta.solana.com"
+  },
+  "mints": {
+    "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "SOL": "So11111111111111111111111111111111111111112"
+  },
+  "capital": {
+    "starting": 101.4,
+    "currency": "USDC"
+  },
+  "risk": {
+    "maxPositionSize": 10,
+    "maxPositions": 3,
+    "stopLossPercent": -15,
+    "takeProfitPercent": 30,
+    "portfolioKillSwitchPercent": -30
+  },
+  "filters": {
+    "minLiquidityUsd": 1000000,
+    "minAgeHours": 24,
+    "minVolume24h": 500000,
+    "volumeSpikeMultiplier": 2.0,
+    "chain": "solana"
+  },
+  "intervals": {
+    "scanMs": 15000,
+    "positionCheckMs": 10000,
+    "heartbeatMs": 300000
+  },
+  "apis": {
+    "dexscreener": "https://api.dexscreener.com",
+    "jupiter": "https://quote-api.jup.ag/v6",
+    "birdeye": "https://public-api.birdeye.so"
+  },
+  "slippageBps": 100,
+  "alertsFile": "/home/bobo_kovacevic/.openclaw/workspace/solana-bot/alerts.log",
+  "stateFile": "/home/bobo_kovacevic/.openclaw/workspace/solana-bot/state.json"
+}
