@@ -55,10 +55,19 @@ function calculatePositionSize(signal) {
 
 /**
  * Calculate stop-loss and take-profit prices
+ * Mean reversion uses tighter bounds (smaller moves, quicker exits)
  * @param {number} entryPrice - Entry price
+ * @param {string} strategy - 'momentum' or 'meanReversion'
  * @returns {{ stopLoss: number, takeProfit: number }}
  */
-function calculateSLTP(entryPrice) {
+function calculateSLTP(entryPrice, strategy = 'momentum') {
+  if (strategy === 'meanReversion') {
+    // Tighter: -8% SL, +10% TP (mean reversion = smaller, faster trades)
+    return {
+      stopLoss: entryPrice * 0.92,
+      takeProfit: entryPrice * 1.10
+    };
+  }
   return {
     stopLoss: entryPrice * (1 + config.risk.stopLossPercent / 100),    // e.g. -15% = 0.85x
     takeProfit: entryPrice * (1 + config.risk.takeProfitPercent / 100)  // e.g. +30% = 1.30x

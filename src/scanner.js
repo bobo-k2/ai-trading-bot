@@ -89,15 +89,27 @@ async function scanTokens() {
     }
 
     // If we got addresses, fetch their pair data
+    // Prioritize watchlist tokens, then trending
     const candidates = [];
-    const addresses = [...solanaAddresses].slice(0, 30); // Limit API calls
+    const watchlistMints = WATCHLIST.map(w => w.mint);
+    const trendingAddrs = [...solanaAddresses].filter(a => !watchlistMints.includes(a));
+    const addresses = [...watchlistMints, ...trendingAddrs.slice(0, 15)]; // Watchlist first, then top 15 trending
 
     if (addresses.length > 0) {
       // Batch fetch - DexScreener allows comma-separated (up to 30)
-      const batchUrl = `${BASE}/tokens/v1/solana/${addresses.join(',')}`;
-      const pairsData = await safeFetch(batchUrl, {}, 15000).catch(() => null);
+      // Split into chunks of 30
+      const chunks = [];
+      for (let i = 0; i < addresses.length; i += 30) {
+        chunks.push(addresses.slice(i, i + 30));
+      }
+      let pairsData = [];
+      for (const chunk of chunks) {
+        const batchUrl = `${BASE}/tokens/v1/solana/${chunk.join(',')}`;
+        const data = await safeFetch(batchUrl, {}, 15000).catch(() => null);
+        if (Array.isArray(data)) pairsData = pairsData.concat(data);
+      }
 
-      if (Array.isArray(pairsData)) {
+      if (pairsData.length > 0) {
         // Group by base token, keep highest liquidity pair per token
         const bestPairs = new Map();
         for (const pair of pairsData) {
@@ -136,6 +148,27 @@ async function scanTokens() {
 
     const watchlistCount = WATCHLIST.length;
     const trendingCount = solanaAddresses.size - watchlistCount;
+
+    // Debug: log filter rejections for watchlist tokens
+    if (candidates.length === 0 && addresses.length > 0) {
+      const batchUrl2 = `${BASE}/tokens/v1/solana/${addresses.slice(0,5).join(',')}`;
+      const sampleData = await safeFetch(batchUrl2, {}, 15000).catch(() => null);
+      if (Array.isArray(sampleData) && sampleData.length > 0) {
+        const bestPairs2 = new Map();
+        for (const pair of sampleData) {
+          const mint = pair.baseToken?.address;
+          if (!mint) continue;
+          const existing = bestPairs2.get(mint);
+          if (!existing || (pair.liquidity?.usd || 0) > (existing.liquidity?.usd || 0)) {
+            bestPairs2.set(mint, pair);
+          }
+        }
+        for (const pair of [...bestPairs2.values()].slice(0, 3)) {
+          passesFilters(pair, true);
+        }
+      }
+    }
+
     console.log(`[SCANNER] Found ${candidates.length} candidates from ${trendingCount} trending + ${watchlistCount} watchlist tokens`);
     return candidates;
 

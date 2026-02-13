@@ -54,12 +54,13 @@ async function scanLoop() {
       const size = calculatePositionSize(signal);
       if (size < 5) continue;
 
-      console.log(`[SCAN] Opening position: ${signal.token} (score: ${signal.score}, size: ${fmtUsd(size)})`);
+      console.log(`[SCAN] Opening position: ${signal.token} (${signal.strategy || 'momentum'}, score: ${signal.score}, size: ${fmtUsd(size)})`);
 
       const result = await executeBuy(signal.mint, size, signal.token);
       if (!result.success) continue;
 
-      const { stopLoss, takeProfit } = calculateSLTP(signal.price);
+      const strategy = signal.strategy || 'momentum';
+      const { stopLoss, takeProfit } = calculateSLTP(signal.price, strategy);
 
       const position = {
         id: posId(),
@@ -74,7 +75,8 @@ async function scanLoop() {
         txId: result.txId,
         simulated: result.simulated || false,
         signalScore: signal.score,
-        signalReasons: signal.reasons
+        signalReasons: signal.reasons,
+        strategy
       };
 
       addPosition(position);
@@ -152,7 +154,7 @@ function shutdown(signal) {
  */
 async function main() {
   console.log('='.repeat(60));
-  console.log('  Solana Momentum Trading Bot');
+  console.log('  Solana Trading Bot (Momentum + Mean Reversion)');
   console.log(`  Mode: ${config.mode.toUpperCase()}`);
   console.log(`  Wallet: ${config.wallet}`);
   console.log(`  Capital: $${config.capital.starting} USDC`);
