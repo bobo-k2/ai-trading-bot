@@ -24,6 +24,15 @@ const WATCHLIST = [
   { symbol: 'TENSOR', mint: 'TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6' },
   { symbol: 'MOBILE', mint: 'mb1eu7TzEc71KxDpsmsKoucSSuuoGLv1drys1oP2jh6' },
   { symbol: 'DRIFT', mint: 'DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7' },
+  { symbol: 'POPCAT', mint: '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr' },
+  { symbol: 'MEW', mint: 'MEW1gQWJ3nEXg2qgERiKu7FAFj79PHvQVREQUzScPP5' },
+  { symbol: 'KMNO', mint: 'KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS' },
+  { symbol: 'SAMO', mint: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU' },
+  { symbol: 'BOME', mint: 'ukHH6c7mMyiWCf1b9pnWe25TSpkDDt3H5pQZgZ74J82' },
+  { symbol: 'WEN', mint: 'WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk' },
+  { symbol: 'TRUMP', mint: '6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN' },
+  { symbol: 'AI16Z', mint: 'HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC' },
+  { symbol: 'FARTCOIN', mint: '9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump' },
 ];
 
 /**
@@ -93,7 +102,7 @@ async function scanTokens() {
     const candidates = [];
     const watchlistMints = WATCHLIST.map(w => w.mint);
     const trendingAddrs = [...solanaAddresses].filter(a => !watchlistMints.includes(a));
-    const addresses = [...watchlistMints, ...trendingAddrs.slice(0, 15)]; // Watchlist first, then top 15 trending
+    const addresses = [...watchlistMints, ...trendingAddrs.slice(0, 60)]; // Watchlist first, then up to 60 trending
 
     if (addresses.length > 0) {
       // Batch fetch - DexScreener allows comma-separated (up to 30)

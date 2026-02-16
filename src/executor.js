@@ -90,7 +90,15 @@ async function executeBuy(outputMint, amountUsdc, tokenSymbol) {
     const swapBody = {
       quoteResponse: quote,
       userPublicKey: keypair.publicKey.toBase58(),
-      wrapAndUnwrapSol: true
+      wrapAndUnwrapSol: true,
+      dynamicComputeUnitLimit: true,
+      dynamicSlippage: true,
+      prioritizationFeeLamports: {
+        priorityLevelWithMaxLamports: {
+          maxLamports: 1000000,
+          priorityLevel: "high"
+        }
+      }
     };
 
     const swapData = await safeFetch(`${JUPITER}/swap`, {
@@ -150,7 +158,15 @@ async function executeSell(inputMint, amount, tokenSymbol) {
     const swapBody = {
       quoteResponse: quote,
       userPublicKey: keypair.publicKey.toBase58(),
-      wrapAndUnwrapSol: true
+      wrapAndUnwrapSol: true,
+      dynamicComputeUnitLimit: true,
+      dynamicSlippage: true,
+      prioritizationFeeLamports: {
+        priorityLevelWithMaxLamports: {
+          maxLamports: 1000000,
+          priorityLevel: "high"
+        }
+      }
     };
 
     const swapData = await safeFetch(`${JUPITER}/swap`, {

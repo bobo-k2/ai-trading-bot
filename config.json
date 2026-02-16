@@ -21,9 +21,9 @@
     "portfolioKillSwitchPercent": -30
   },
   "filters": {
-    "minLiquidityUsd": 1000000,
+    "minLiquidityUsd": 500000,
     "minAgeHours": 24,
-    "minVolume24h": 500000,
+    "minVolume24h": 200000,
     "volumeSpikeMultiplier": 2.0,
     "chain": "solana"
   },
@@ -34,7 +34,7 @@
   },
   "apis": {
     "dexscreener": "https://api.dexscreener.com",
-    "jupiter": "https://quote-api.jup.ag/v6",
+    "jupiter": "https://lite-api.jup.ag/swap/v1",
     "birdeye": "https://public-api.birdeye.so"
   },
   "slippageBps": 100,
