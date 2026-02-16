@@ -14,11 +14,14 @@ const { initExecutor, executeBuy, executeSell } = require('./executor');
 const { canOpenPosition, calculatePositionSize, calculateSLTP, checkPosition, hasPosition, portfolioCheck } = require('./risk');
 const { writeAlert } = require('./alerts');
 const { sleep, fmtUsd, shortAddr } = require('./utils');
+const { gridLoop, gridScanLoop, initGridState, getGridStatus } = require('./grid');
 
 let running = true;
 let scanTimer = null;
 let positionTimer = null;
 let heartbeatTimer = null;
+let gridTimer = null;
+let gridScanTimer = null;
 
 /** Generate a unique position ID */
 function posId() { return `pos-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`; }
@@ -38,6 +41,13 @@ async function scanLoop() {
     // Scan for candidates
     const candidates = await scanTokens();
     if (candidates.length === 0) return;
+
+    // Feed candidates to grid scanner (if enabled)
+    if (config.grid?.enabled) {
+      await gridScanLoop(candidates).catch(err =>
+        writeAlert('ERROR', `Grid scan error: ${err.message}`)
+      );
+    }
 
     // Detect signals
     const signals = detectSignals(candidates);
@@ -132,6 +142,16 @@ async function positionLoop() {
  */
 function heartbeat() {
   const summary = portfolioCheck();
+
+  // Include grid status in heartbeat
+  if (config.grid?.enabled) {
+    const gridStatus = getGridStatus();
+    summary.grid = gridStatus;
+    if (gridStatus.activeGrids > 0) {
+      writeAlert('GRID_STATUS', `Grids: ${gridStatus.activeGrids} active | PnL: $${gridStatus.totalPnl.toFixed(2)} | Trades: ${gridStatus.totalTrades} | Capital: $${gridStatus.capitalAllocated.toFixed(2)}`, gridStatus);
+    }
+  }
+
   writeAlert('HEARTBEAT', `Bot alive | Mode: ${config.mode} | Uptime: running`, summary);
 }
 
@@ -144,6 +164,8 @@ function shutdown(signal) {
   clearInterval(scanTimer);
   clearInterval(positionTimer);
   clearInterval(heartbeatTimer);
+  clearInterval(gridTimer);
+  clearInterval(gridScanTimer);
   saveState();
   console.log('[BOT] State saved. Goodbye!');
   process.exit(0);
@@ -196,6 +218,16 @@ async function main() {
   scanTimer = setInterval(scanLoop, config.intervals.scanMs);
   positionTimer = setInterval(positionLoop, config.intervals.positionCheckMs);
   heartbeatTimer = setInterval(heartbeat, config.intervals.heartbeatMs);
+
+  // Start grid trading if enabled
+  if (config.grid?.enabled) {
+    initGridState();
+    const gridCheckMs = config.grid.checkIntervalMs || 15000;
+    gridTimer = setInterval(() => {
+      gridLoop().catch(err => writeAlert('ERROR', `Grid loop error: ${err.message}`));
+    }, gridCheckMs);
+    console.log(`[BOT] Grid trading enabled (check every ${gridCheckMs / 1000}s, ${config.grid.levels} levels, ${config.grid.spreadPercent}% spread)`);
+  }
 
   console.log('[BOT] All systems go! 🚀');
 }

@@ -37,6 +37,18 @@
     "jupiter": "https://lite-api.jup.ag/swap/v1",
     "birdeye": "https://public-api.birdeye.so"
   },
+  "grid": {
+    "enabled": true,
+    "spreadPercent": 2,
+    "levels": 5,
+    "capitalPerLevel": 5,
+    "maxCapital": 30,
+    "maxTokens": 3,
+    "checkIntervalMs": 15000,
+    "scanIntervalMs": 300000,
+    "minLiquidity": 2000000,
+    "maxVolatility24h": 8
+  },
   "slippageBps": 100,
   "alertsFile": "/home/bobo_kovacevic/.openclaw/workspace/solana-bot/alerts.log",
   "stateFile": "/home/bobo_kovacevic/.openclaw/workspace/solana-bot/state.json"
