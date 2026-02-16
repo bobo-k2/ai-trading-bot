@@ -195,13 +195,18 @@ async function main() {
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('uncaughtException', (err) => {
-    writeAlert('ERROR', `Uncaught exception: ${err.message}`, { stack: err.stack });
-    console.error(err);
+    // Ignore EPIPE errors (broken pipe from PM2 cluster mode)
+    if (err?.code === 'EPIPE' || err?.message?.includes('EPIPE')) return;
+    try { writeAlert('ERROR', `Uncaught exception: ${err.message}`, { stack: err.stack }); } catch (_) {}
   });
   process.on('unhandledRejection', (err) => {
-    writeAlert('ERROR', `Unhandled rejection: ${err?.message || err}`, {});
-    console.error(err);
+    if (err?.code === 'EPIPE' || err?.message?.includes?.('EPIPE')) return;
+    try { writeAlert('ERROR', `Unhandled rejection: ${err?.message || err}`, {}); } catch (_) {}
   });
+
+  // Suppress EPIPE on stdout/stderr (PM2 cluster mode issue)
+  process.stdout?.on?.('error', (err) => { if (err.code !== 'EPIPE') throw err; });
+  process.stderr?.on?.('error', (err) => { if (err.code !== 'EPIPE') throw err; });
 
   // Initial heartbeat
   heartbeat();

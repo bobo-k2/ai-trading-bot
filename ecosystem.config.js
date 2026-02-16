@@ -3,6 +3,7 @@ module.exports = {
     name: 'solana-momentum-bot',
     script: 'src/index.js',
     cwd: __dirname,
+    exec_mode: 'fork',        // Fork mode — avoids EPIPE issues with cluster
     instances: 1,
     autorestart: true,
     watch: false,
@@ -12,6 +13,9 @@ module.exports = {
     },
     error_file: './logs/err.log',
     out_file: './logs/out.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    merge_logs: true,
+    max_restarts: 10,
+    restart_delay: 5000
   }]
 };
