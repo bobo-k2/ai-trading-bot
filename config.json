@@ -14,7 +14,7 @@
     "currency": "USDC"
   },
   "risk": {
-    "maxPositionSize": 10,
+    "maxPositionSize": 20,
     "maxPositions": 3,
     "stopLossPercent": -15,
     "takeProfitPercent": 30,
@@ -42,12 +42,12 @@
     "spreadPercent": 2,
     "levels": 5,
     "capitalPerLevel": 5,
-    "maxCapital": 30,
-    "maxTokens": 3,
+    "maxCapital": 50,
+    "maxTokens": 5,
     "checkIntervalMs": 15000,
     "scanIntervalMs": 300000,
-    "minLiquidity": 2000000,
-    "maxVolatility24h": 8
+    "minLiquidity": 1000000,
+    "maxVolatility24h": 12
   },
   "slippageBps": 100,
   "alertsFile": "/home/bobo_kovacevic/.openclaw/workspace/solana-bot/alerts.log",
