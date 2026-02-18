@@ -14,8 +14,8 @@
     "currency": "USDC"
   },
   "risk": {
-    "maxPositionSize": 20,
-    "maxPositions": 5,
+    "maxPositionSize": 30,
+    "maxPositions": 8,
     "stopLossPercent": -15,
     "takeProfitPercent": 30,
     "portfolioKillSwitchPercent": -30
@@ -42,7 +42,7 @@
     "spreadPercent": 2,
     "levels": 5,
     "capitalPerLevel": 5,
-    "maxCapital": 75,
+    "maxCapital": 100,
     "maxTokens": 5,
     "checkIntervalMs": 15000,
     "scanIntervalMs": 300000,
