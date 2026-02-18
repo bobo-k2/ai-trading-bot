@@ -15,7 +15,7 @@
   },
   "risk": {
     "maxPositionSize": 20,
-    "maxPositions": 3,
+    "maxPositions": 5,
     "stopLossPercent": -15,
     "takeProfitPercent": 30,
     "portfolioKillSwitchPercent": -30
@@ -42,7 +42,7 @@
     "spreadPercent": 2,
     "levels": 5,
     "capitalPerLevel": 5,
-    "maxCapital": 50,
+    "maxCapital": 75,
     "maxTokens": 5,
     "checkIntervalMs": 15000,
     "scanIntervalMs": 300000,
