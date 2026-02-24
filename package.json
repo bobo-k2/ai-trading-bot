@@ -8,11 +8,12 @@
     "dev": "node src/index.js"
   },
   "dependencies": {
+    "@coral-xyz/anchor": "^0.28.0",
+    "@drift-labs/sdk": "^2.155.0",
     "@solana/web3.js": "^1.95.0",
     "bs58": "^5.0.0",
     "node-fetch": "^2.7.0"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=18.0.0"
   }

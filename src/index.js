@@ -15,6 +15,8 @@ const { canOpenPosition, calculatePositionSize, calculateSLTP, checkPosition, ha
 const { writeAlert } = require('./alerts');
 const { sleep, fmtUsd, shortAddr } = require('./utils');
 const { gridLoop, gridScanLoop, initGridState, getGridStatus } = require('./grid');
+const { initDrift, openShort, closeShort, getShortPnl } = require('./drift');
+const { getMarketTrend } = require('./trend');
 
 let running = true;
 let scanTimer = null;
@@ -53,6 +55,17 @@ async function scanLoop() {
     const signals = detectSignals(candidates);
     if (signals.length === 0) return;
 
+    // Check market trend for short/long decision
+    const driftConfig = config.drift || {};
+    let trend = { trend: 'neutral' };
+    if (driftConfig.enabled) {
+      try {
+        trend = await getMarketTrend();
+      } catch (err) {
+        console.log(`[SCAN] Trend check failed: ${err.message}`);
+      }
+    }
+
     // Try to open positions for top signals
     for (const signal of signals.slice(0, 3)) {
       const recheck = canOpenPosition();
@@ -60,6 +73,12 @@ async function scanLoop() {
 
       // Skip if we already hold this token
       if (hasPosition(signal.mint)) continue;
+
+      // In downtrend: skip mean reversion longs, open shorts instead
+      if (driftConfig.enabled && trend.trend === 'downtrend' && signal.strategy === 'meanReversion') {
+        console.log(`[SCAN] Skipping mean reversion long for ${signal.token} — downtrend detected, will short instead`);
+        continue;
+      }
 
       const size = calculatePositionSize(signal);
       if (size < 5) continue;
@@ -96,6 +115,58 @@ async function scanLoop() {
 
       await sleep(1000); // Rate limit between trades
     }
+
+    // ── DRIFT SHORTING: Open shorts in downtrend ──
+    if (driftConfig.enabled && trend.trend === 'downtrend') {
+      const state = getState();
+      const openShorts = (state.positions || []).filter(p => p.strategy === 'driftShort');
+      const maxShorts = driftConfig.maxShorts || 3;
+
+      if (openShorts.length < maxShorts) {
+        for (const market of (driftConfig.markets || ['SOL-PERP'])) {
+          // Check if we already have a short on this market
+          if (openShorts.some(s => s.market === market)) continue;
+          if (openShorts.length >= maxShorts) break;
+
+          const shortSize = Math.min(
+            driftConfig.maxShortSize || 30,
+            20 + Math.random() * 10 // $20-30 range
+          );
+
+          console.log(`[SCAN] Downtrend detected — opening short: ${market} ${fmtUsd(shortSize)}`);
+
+          const result = await openShort(market, shortSize, driftConfig.leverage || 1);
+          if (!result.success) continue;
+
+          const slPercent = driftConfig.stopLossPercent || 8;
+          const tpPercent = driftConfig.takeProfitPercent || 10;
+
+          const shortPosition = {
+            id: result.positionId,
+            token: market,
+            mint: market, // use market name as mint for shorts
+            market,
+            entryPrice: result.entryPrice,
+            baseAmount: result.baseAmount,
+            usdcSpent: shortSize,
+            openedAt: new Date().toISOString(),
+            stopLoss: result.entryPrice * (1 + slPercent / 100),   // short SL is price UP
+            takeProfit: result.entryPrice * (1 - tpPercent / 100), // short TP is price DOWN
+            txId: result.txId,
+            simulated: result.simulated || false,
+            strategy: 'driftShort',
+            leverage: driftConfig.leverage || 1
+          };
+
+          addPosition(shortPosition);
+          deductCapital(shortSize);
+
+          writeAlert('TRADE_OPEN', `Opened SHORT ${market}: ${fmtUsd(shortSize)} @ $${result.entryPrice.toFixed(2)} | SL: $${shortPosition.stopLoss.toFixed(2)} | TP: $${shortPosition.takeProfit.toFixed(2)}`, shortPosition);
+
+          await sleep(1000);
+        }
+      }
+    }
   } catch (err) {
     writeAlert('ERROR', `Scan loop error: ${err.message}`);
   }
@@ -110,12 +181,73 @@ async function positionLoop() {
     const state = getState();
     if (state.positions.length === 0) return;
 
+    const timeStopMs = (config.timeStopHours || 24) * 60 * 60 * 1000;
+
     for (const pos of [...state.positions]) {
+      // ── DRIFT SHORT POSITIONS ──
+      if (pos.strategy === 'driftShort') {
+        // Get current price for the perp market via DexScreener (SOL)
+        const solMint = config.mints.SOL;
+        const priceData = await getTokenPrice(solMint);
+        if (!priceData) continue;
+
+        const currentPrice = priceData.price;
+        const { pnl, pnlPercent } = getShortPnl(pos, currentPrice);
+
+        let shouldClose = false;
+        let reason = '';
+
+        // Short stop loss: price went UP past SL
+        if (currentPrice >= pos.stopLoss) {
+          shouldClose = true;
+          reason = 'SHORT_STOP_LOSS';
+        }
+        // Short take profit: price went DOWN past TP
+        else if (currentPrice <= pos.takeProfit) {
+          shouldClose = true;
+          reason = 'SHORT_TAKE_PROFIT';
+        }
+        // 24h time stop: close if open > 24h and not profitable
+        else if (pos.openedAt) {
+          const openDuration = Date.now() - new Date(pos.openedAt).getTime();
+          if (openDuration > timeStopMs && pnl <= 0) {
+            shouldClose = true;
+            reason = 'TIME_STOP_24H';
+          }
+        }
+
+        if (shouldClose) {
+          console.log(`[POSITION] Closing short ${pos.market}: ${reason} @ $${currentPrice.toFixed(2)} (entry: $${pos.entryPrice.toFixed(2)}, PnL: ${pnlPercent.toFixed(1)}%)`);
+
+          const result = await closeShort(pos.market, pos.baseAmount);
+          if (result.success) {
+            const usdcReceived = pos.usdcSpent + pnl;
+            closePosition(pos.id, currentPrice, usdcReceived, reason);
+          }
+        } else {
+          console.log(`[POSITION] SHORT ${pos.market}: $${currentPrice.toFixed(2)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(1)}%)`);
+        }
+
+        await sleep(500);
+        continue;
+      }
+
+      // ── REGULAR (LONG) POSITIONS ──
       const priceData = await getTokenPrice(pos.mint);
       if (!priceData) continue;
 
       const currentPrice = priceData.price;
-      const { shouldClose, reason } = checkPosition(pos, currentPrice);
+      let { shouldClose, reason } = checkPosition(pos, currentPrice);
+
+      // 24h time stop for longs too
+      if (!shouldClose && pos.openedAt) {
+        const openDuration = Date.now() - new Date(pos.openedAt).getTime();
+        const longPnl = currentPrice - pos.entryPrice;
+        if (openDuration > timeStopMs && longPnl <= 0) {
+          shouldClose = true;
+          reason = 'TIME_STOP_24H';
+        }
+      }
 
       if (shouldClose) {
         console.log(`[POSITION] Closing ${pos.token}: ${reason} @ $${currentPrice.toFixed(6)} (entry: $${pos.entryPrice.toFixed(6)})`);
@@ -183,6 +315,10 @@ async function main() {
   console.log(`  Max position: $${config.risk.maxPositionSize} | Max positions: ${config.risk.maxPositions}`);
   console.log(`  SL: ${config.risk.stopLossPercent}% | TP: +${config.risk.takeProfitPercent}%`);
   console.log(`  Kill switch: ${config.risk.portfolioKillSwitchPercent}%`);
+  if (config.drift?.enabled) {
+    console.log(`  Drift shorting: ENABLED | Leverage: ${config.drift.leverage}x | Max shorts: ${config.drift.maxShorts}`);
+  }
+  console.log(`  Time stop: ${config.timeStopHours || 24}h`);
   console.log('='.repeat(60));
 
   // Load persisted state
@@ -190,6 +326,12 @@ async function main() {
 
   // Init executor (wallet + RPC)
   initExecutor();
+
+  // Init Drift (if enabled)
+  if (config.drift?.enabled) {
+    const driftOk = await initDrift();
+    console.log(`[BOT] Drift integration: ${driftOk ? 'READY' : 'FAILED'}`);
+  }
 
   // Handle shutdown signals
   process.on('SIGINT', () => shutdown('SIGINT'));

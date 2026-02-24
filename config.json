@@ -49,6 +49,16 @@
     "minLiquidity": 1000000,
     "maxVolatility24h": 12
   },
+  "drift": {
+    "enabled": true,
+    "leverage": 1,
+    "maxShortSize": 30,
+    "maxShorts": 3,
+    "stopLossPercent": 8,
+    "takeProfitPercent": 10,
+    "markets": ["SOL-PERP"]
+  },
+  "timeStopHours": 24,
   "slippageBps": 100,
   "alertsFile": "/home/bobo_kovacevic/.openclaw/workspace/solana-bot/alerts.log",
   "stateFile": "/home/bobo_kovacevic/.openclaw/workspace/solana-bot/state.json"
