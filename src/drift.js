@@ -119,12 +119,24 @@ async function openShort(market, sizeUsdc, leverage) {
   try {
     const marketIndex = getMarketIndex(market);
 
-    // DRY-RUN mode
+    // DRY-RUN mode — fetch real market price for realistic simulation
     if (config.mode !== 'live' || !driftClient) {
-      const simulatedPrice = market === 'SOL-PERP' ? 150 : 1; // rough placeholder
+      let simulatedPrice = 1;
+      try {
+        // Map market name to a real token for price lookup
+        const priceToken = market === 'SOL-PERP' ? 'So11111111111111111111111111111111111111112' : null;
+        if (priceToken) {
+          const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${priceToken}`);
+          const data = await res.json();
+          const pair = data?.pairs?.find(p => p.quoteToken?.symbol === 'USDC' || p.quoteToken?.symbol === 'USDT');
+          if (pair) simulatedPrice = parseFloat(pair.priceUsd) || simulatedPrice;
+        }
+      } catch (e) {
+        console.log(`[DRIFT] Price fetch failed for ${market}, using fallback`);
+      }
       const baseAmount = sizeUsdc / simulatedPrice;
 
-      console.log(`[DRIFT] DRY-RUN SHORT: ${market} | Size: $${sizeUsdc.toFixed(2)} | Leverage: ${leverage}x`);
+      console.log(`[DRIFT] DRY-RUN SHORT: ${market} | Size: $${sizeUsdc.toFixed(2)} | Leverage: ${leverage}x | Entry: $${simulatedPrice.toFixed(2)}`);
       return {
         success: true,
         positionId: `drift-short-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
