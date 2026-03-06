@@ -19,7 +19,7 @@ const WATCHLIST = [
   { symbol: 'MNDE', mint: 'MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey' },
   { symbol: 'RENDER', mint: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof' },
   { symbol: 'HNT', mint: 'hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux' },
-  { symbol: 'JITO', mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn' },
+  // JITO (jitoSOL) removed — liquid staking derivative, excluded from trading
   { symbol: 'W', mint: '85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ' },
   { symbol: 'TENSOR', mint: 'TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6' },
   { symbol: 'MOBILE', mint: 'mb1eu7TzEc71KxDpsmsKoucSSuuoGLv1drys1oP2jh6' },
@@ -210,12 +210,29 @@ async function getTokenPrice(mint) {
   }
 }
 
+// Stablecoins and wrapped assets we should never buy (we trade WITH these, not INTO them)
+const EXCLUDED_MINTS = new Set([
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
+  'USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX',  // USDH
+  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',  // mSOL (liquid staking)
+  'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',  // bSOL (liquid staking)
+  'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', // jitoSOL (liquid staking)
+]);
+
 /** Check if a pair meets our minimum filters */
 function passesFilters(pair, verbose = false) {
   const liq = pair.liquidity?.usd || 0;
   const vol = pair.volume?.h24 || 0;
   const age = pair.pairCreatedAt ? (Date.now() - pair.pairCreatedAt) / 3600000 : 0;
   const symbol = pair.baseToken?.symbol || 'UNKNOWN';
+  const mint = pair.baseToken?.address || '';
+
+  // Never trade stablecoins or excluded assets
+  if (EXCLUDED_MINTS.has(mint)) {
+    if (verbose) console.log(`[SCANNER] ❌ ${symbol}: excluded (stablecoin/wrapped asset)`);
+    return false;
+  }
 
   const pass = (
     pair.chainId === 'solana' &&

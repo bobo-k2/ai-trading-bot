@@ -6,6 +6,7 @@
  *
  * Default: DRY-RUN mode (no real trades)
  */
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const config = require('../config.json');
 const { loadState, getState, addPosition, closePosition, deductCapital, saveState } = require('./state');
 const { scanTokens, getTokenPrice } = require('./scanner');
