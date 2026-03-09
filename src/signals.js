@@ -274,11 +274,11 @@ function detectSignals(candidates) {
     // Always record price for building history
     recordPrice(token.mint, token.price);
 
-    // Run momentum
-    const mom = analyzeMomentum(token);
-    if (mom.score >= 35) allSignals.push(mom);
+    // Momentum strategy DISABLED — 22% win rate, -$8.30 over 54 trades
+    // const mom = analyzeMomentum(token);
+    // if (mom.score >= 35) allSignals.push(mom);
 
-    // Run mean reversion
+    // Run mean reversion only
     const mr = analyzeMeanReversion(token);
     if (mr.score >= 35) allSignals.push(mr);
   }

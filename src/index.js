@@ -75,6 +75,18 @@ async function scanLoop() {
       // Skip if we already hold this token
       if (hasPosition(signal.mint)) continue;
 
+      // 12h cooldown: skip if we recently closed a position in this token
+      const state = getState();
+      const recentClose = (state.closedTrades || []).find(t =>
+        t.mint === signal.mint &&
+        t.closedAt &&
+        (Date.now() - new Date(t.closedAt).getTime()) < 12 * 60 * 60 * 1000
+      );
+      if (recentClose) {
+        console.log(`[SCAN] Skipping ${signal.token}: 12h cooldown (closed ${recentClose.closeReason || ''} at ${recentClose.closedAt})`);
+        continue;
+      }
+
       // In downtrend: skip mean reversion longs, open shorts instead
       if (driftConfig.enabled && trend.trend === 'downtrend' && signal.strategy === 'meanReversion') {
         console.log(`[SCAN] Skipping mean reversion long for ${signal.token} — downtrend detected, will short instead`);
